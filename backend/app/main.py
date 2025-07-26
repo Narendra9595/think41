@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
 from app.models import User, Conversation, Message
-from typing import List
+from typing import List, Optional
 import os
+from datetime import datetime
 
 # MongoDB connection
 MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://grandhinarendrakumar:Geyjrq77USksXqap@cluster41.p2i211j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster41")
@@ -22,7 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Utility to convert MongoDB documents to dicts with string IDs
 def fix_id(doc):
     doc["_id"] = str(doc["_id"])
     return doc
@@ -71,3 +71,53 @@ def create_message(msg: Message):
 def get_conversation_messages(conv_id: str):
     msgs = list(db.messages.find({"conversation_id": conv_id}))
     return [fix_id(m) for m in msgs]
+
+# --- Core Chat API ---
+@app.post("/api/chat")
+def chat(
+    user_id: str = Body(...),
+    message: str = Body(...),
+    conversation_id: Optional[str] = Body(None)
+):
+    now = datetime.utcnow()
+    # If conversation_id is provided, use it; else, create new conversation
+    if conversation_id:
+        conv = db.conversations.find_one({"_id": conversation_id})
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        db.conversations.update_one({"_id": conversation_id}, {"$set": {"updated_at": now}})
+    else:
+        conversation_id = str(ObjectId())
+        conv_doc = {
+            "_id": conversation_id,
+            "user_id": user_id,
+            "created_at": now,
+            "updated_at": now
+        }
+        db.conversations.insert_one(conv_doc)
+    # Insert user's message
+    user_msg_id = str(ObjectId())
+    user_msg_doc = {
+        "_id": user_msg_id,
+        "conversation_id": conversation_id,
+        "sender": "user",
+        "content": message,
+        "timestamp": now
+    }
+    db.messages.insert_one(user_msg_doc)
+    # Generate a placeholder AI response
+    ai_response = f"Echo: {message}"
+    ai_msg_id = str(ObjectId())
+    ai_msg_doc = {
+        "_id": ai_msg_id,
+        "conversation_id": conversation_id,
+        "sender": "ai",
+        "content": ai_response,
+        "timestamp": datetime.utcnow()
+    }
+    db.messages.insert_one(ai_msg_doc)
+    return {
+        "conversation_id": conversation_id,
+        "user_message": user_msg_doc,
+        "ai_message": ai_msg_doc
+    }
