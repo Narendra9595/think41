@@ -1,14 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
 import styles from "./UserInput.module.css";
 
-const UserInput = ({ onSend }) => {
-  const [input, setInput] = useState("");
-
+const UserInput = ({ onSend, inputValue, setInputValue, disabled }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (input.trim()) {
-      onSend(input);
-      setInput("");
+    if (inputValue.trim()) {
+      onSend(inputValue);
+      setInputValue("");
     }
   };
 
@@ -18,11 +16,12 @@ const UserInput = ({ onSend }) => {
         type="text"
         className={styles.input}
         placeholder="Type your message..."
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
         autoFocus
+        disabled={disabled}
       />
-      <button className={styles.button} type="submit">
+      <button className={styles.button} type="submit" disabled={disabled}>
         Send
       </button>
     </form>
