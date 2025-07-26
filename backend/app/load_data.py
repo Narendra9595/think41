@@ -1,7 +1,12 @@
 import pandas as pd
 from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
 
-client = MongoClient("mongodb+srv://grandhinarendrakumar:Geyjrq77USksXqap@cluster41.p2i211j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster41")
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(MONGO_URI)
 
 db = client['ecommerce_bot']
 
