@@ -5,12 +5,21 @@ from bson import ObjectId
 from app.models import User, Conversation, Message
 from typing import List, Optional
 import os
+from dotenv import load_dotenv
 from datetime import datetime
+import requests
+
+load_dotenv()  # Load environment variables from .env file
 
 # MongoDB connection
 MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://grandhinarendrakumar:Geyjrq77USksXqap@cluster41.p2i211j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster41")
 client = MongoClient(MONGO_URI)
 db = client['ecommerce_bot']
+
+# Groq LLM API configuration
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "sk-...replace_with_yours...")
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama3-8b-8192"
 
 app = FastAPI()
 
@@ -72,7 +81,7 @@ def get_conversation_messages(conv_id: str):
     msgs = list(db.messages.find({"conversation_id": conv_id}))
     return [fix_id(m) for m in msgs]
 
-# --- Core Chat API ---
+# --- Core Chat API with LLM Integration ---
 @app.post("/api/chat")
 def chat(
     user_id: str = Body(...),
@@ -105,8 +114,35 @@ def chat(
         "timestamp": now
     }
     db.messages.insert_one(user_msg_doc)
-    # Generate a placeholder AI response
-    ai_response = f"Echo: {message}"
+
+    # --- LLM Logic ---
+    # If the user's message is very short or contains a question, ask for clarification
+    if len(message.strip()) < 8 or message.strip().endswith('?'):
+        ai_response = "Could you please clarify your request or provide more details?"
+    else:
+        # Prepare conversation history for context (last 5 messages)
+        history = list(db.messages.find({"conversation_id": conversation_id}).sort("timestamp", -1).limit(5))
+        history = list(reversed(history))
+        chat_history = []
+        for msg in history:
+            role = "user" if msg["sender"] == "user" else "assistant"
+            chat_history.append({"role": role, "content": msg["content"]})
+        # Add latest user message
+        chat_history.append({"role": "user", "content": message})
+        # Call Groq API
+        headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+        payload = {
+            "model": GROQ_MODEL,
+            "messages": chat_history,
+            "max_tokens": 256
+        }
+        try:
+            response = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=10)
+            response.raise_for_status()
+            ai_response = response.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            ai_response = "[LLM Error: Could not generate response]"
+    # Insert AI message
     ai_msg_id = str(ObjectId())
     ai_msg_doc = {
         "_id": ai_msg_id,
