@@ -34,6 +34,13 @@ function chatReducer(state, action) {
       };
     case "SET_INPUT":
       return { ...state, input: action.payload };
+    case "LOAD_CONVERSATION":
+      return {
+        ...state,
+        messages: action.payload,
+        loading: false,
+        input: ""
+      };
     default:
       return state;
   }
