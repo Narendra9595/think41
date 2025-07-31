@@ -1,12 +1,15 @@
 import React from "react";
 import ChatWindow from "./components/ChatWindow";
 import { ChatProvider } from "./components/ChatContext";
+import "./App.css";
 
 function App() {
   return (
-    <ChatProvider>
-      <ChatWindow />
-    </ChatProvider>
+    <div className="App">
+      <ChatProvider>
+        <ChatWindow />
+      </ChatProvider>
+    </div>
   );
 }
 

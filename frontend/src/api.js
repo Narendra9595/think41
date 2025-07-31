@@ -1,20 +1,48 @@
-import axios from "axios";
+import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000/api";
+const API_BASE_URL = 'http://localhost:8000';
 
-export const sendChatMessage = async ({ user_id, message, conversation_id }) => {
-  const res = await axios.post(`${API_BASE}/chat`, { user_id, message, conversation_id });
-  return res.data;
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const sendChatMessage = async (data) => {
+  try {
+    const response = await api.post('/api/chat', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error sending chat message:', error);
+    throw error;
+  }
 };
 
-export const fetchConversations = async (user_id) => {
-  // GET /users/{user_id}/conversations
-  const res = await axios.get(`${API_BASE.replace('/api','')}/users/${user_id}/conversations`);
-  return { conversations: res.data };
+export const fetchMessages = async (conversationId) => {
+  try {
+    const response = await api.get(`/conversations/${conversationId}/messages`);
+    return {
+      messages: response.data
+    };
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    return {
+      messages: []
+    };
+  }
 };
 
-export const fetchMessages = async (conversation_id) => {
-  // GET /conversations/{conv_id}/messages
-  const res = await axios.get(`${API_BASE.replace('/api','')}/conversations/${conversation_id}/messages`);
-  return { messages: res.data };
-};
+export const fetchConversations = async (userId) => {
+  try {
+    const response = await api.get(`/users/${userId}/conversations`);
+    return {
+      conversations: response.data
+    };
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    return {
+      conversations: []
+    };
+  }
+}; 

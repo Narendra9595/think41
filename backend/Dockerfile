@@ -4,6 +4,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 COPY ./app ./app
+COPY ./datasets ./datasets
 COPY requirements.txt ./
 COPY .env ./
 
